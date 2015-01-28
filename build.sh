@@ -96,7 +96,7 @@ then
     make install
     popd > /dev/null
 fi
-#EOF
+EOF
 
 cd ghc
 
@@ -149,7 +149,7 @@ DYNAMIC_GHC_PROGRAMS = NO
 # NoFib settings
 NoFibWays =
 STRIP_CMD = :
-#EOF
+EOF
 
 # do configure
 echo --------------------------------------------------------------------------------
@@ -171,7 +171,7 @@ cd ..
 touch test.hs
 cat > test.hs <<EOF
 main = putStrLn "Hello World"
-#EOF
+EOF
 
 ./ghc/in-place/ghc-stage1 test.hs
 file test
