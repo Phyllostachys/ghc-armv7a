@@ -1,0 +1,49 @@
+--- run_tic.sh.old	2015-01-28 11:35:58.664827000 -0500
++++ run_tic.sh	2015-01-28 11:42:25.899104677 -0500
+@@ -124,46 +124,6 @@
+ # the directory is actually a symbolic link.
+ ( test -d "$TERMINFO" && cd $TERMINFO && rm -fr ? 2>/dev/null )
+ 
+-if test "$ext_funcs" = 1 ; then
+-cat <<EOF
+-Running $TIC_PATH to install $TERMINFO ...
+-
+-	You may see messages regarding extended capabilities, e.g., AX.
+-	These are extended terminal capabilities which are compiled
+-	using
+-		tic -x
+-	If you have ncurses 4.2 applications, you should read the INSTALL
+-	document, and install the terminfo without the -x option.
+-
+-EOF
+-if ( $TIC_PATH -x -s -o $TERMINFO $source )
+-then
+-	echo '** built new '$TERMINFO
+-else
+-	echo '? tic could not build '$TERMINFO
+-	exit 1
+-fi
+-else
+-cat <<EOF
+-Running $TIC_PATH to install $TERMINFO ...
+-
+-	You may see messages regarding unknown capabilities, e.g., AX.
+-	These are extended terminal capabilities which may be compiled
+-	using
+-		tic -x
+-	If you have ncurses 4.2 applications, you should read the INSTALL
+-	document, and install the terminfo without the -x option.
+-
+-EOF
+-if ( $TIC_PATH -s -o $TERMINFO $source )
+-then
+-	echo '** built new '$TERMINFO
+-else
+-	echo '? tic could not build '$TERMINFO
+-	exit 1
+-fi
+-fi
+-
+ # Make a symbolic link to provide compatibility with applications that expect
+ # to find terminfo under /usr/lib.  That is, we'll _try_ to do that.  Not
+ # all systems support symbolic links, and those that do provide a variety

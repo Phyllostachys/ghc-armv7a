@@ -11,6 +11,26 @@ BUILD_ARCH=$($BUILD_GCC -v 2>&1 | grep ^Target: | cut -f 2 -d ' ')
 MAKEFLAGS=${MAKEFLAGS:--j4}
 
 echo --------------------------------------------------------------------------------
+echo -- Checking if needed programs are installed
+echo --------------------------------------------------------------------------------
+function check_progs {
+    if ! command -v $1 >/dev/null
+    then
+        echo Need $1
+        exit 1
+    else
+        echo Have $1
+    fi
+}
+
+check_progs git
+check_progs curl
+check_progs tar
+check_progs make
+check_progs $TARGET_GCC
+check_progs patch
+
+echo --------------------------------------------------------------------------------
 echo -- Checking if ghc has been downloaded
 echo --------------------------------------------------------------------------------
 if ! [ -d "./ghc" ]
@@ -30,10 +50,11 @@ NCURSES_RELEASE=5.9
 NCURSES_TAR_FILE=ncurses-${NCURSES_RELEASE}.tar.gz
 NCURSES_TAR_PATH="./${NCURSES_TAR_FILE}"
 NCURSES_SRC="./ncurses-${NCURSES_RELEASE}"
-if ! [ -d "$NCURSES_SRC" ]
-then
+if ! [ -f "$NCURSES_TAR_FILE" ]; then
     echo Downloading ncurses $NCURSES_RELEASE
     curl -o "${NCURSES_TAR_FILE}" http://ftp.gnu.org/pub/gnu/ncurses/${NCURSES_TAR_FILE}
+fi
+if ! [ -d "$NCURSES_SRC" ]; then
     tar xf "$NCURSES_TAR_FILE"
 fi
 
@@ -44,6 +65,7 @@ fi
     then
         ./configure --host=$TARGET --build=$BUILD_ARCH --with-build-cc=$BUILD_GCC --enable-static --disable-shared --without-manpages --without-cxx-binding
         echo '#undef HAVE_LOCALE_H' >> "$NCURSES_SRC/include/ncurses_cfg.h" # TMP hack
+        patch ./misc/run_tic.sh < ../run_tic.sh.patch
         make $MAKEFLAGS
     fi
     sudo make install prefix=/usr/$TARGET
@@ -74,7 +96,7 @@ then
     make install
     popd > /dev/null
 fi
-EOF
+#EOF
 
 cd ghc
 
@@ -127,7 +149,7 @@ DYNAMIC_GHC_PROGRAMS = NO
 # NoFib settings
 NoFibWays =
 STRIP_CMD = :
-EOF
+#EOF
 
 # do configure
 echo --------------------------------------------------------------------------------
@@ -149,7 +171,7 @@ cd ..
 touch test.hs
 cat > test.hs <<EOF
 main = putStrLn "Hello World"
-EOF
+#EOF
 
 ./ghc/in-place/ghc-stage1 test.hs
 file test
