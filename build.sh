@@ -6,6 +6,10 @@ TARGET_LD=$TARGET-ld
 TARGET_NM=$TARGET-nm
 TARGET_OBJDUMP=$TARGET-objdump
 
+BUILD_GCC=gcc
+BUILD_ARCH=$($BUILD_GCC -v 2>&1 | grep ^Target: | cut -f 2 -d ' ')
+MAKEFLAGS=${MAKEFLAGS:--j4}
+
 echo --------------------------------------------------------------------------------
 echo -- Checking if ghc has been downloaded
 echo --------------------------------------------------------------------------------
@@ -19,6 +23,58 @@ else
     git pull
     cd ..
 fi
+
+## Borrowed the downloading and building scripts from ghc-android (https://github.com/neurocyte/ghc-android)
+# downloading, cross-building, and installing ncurses
+NCURSES_RELEASE=5.9
+NCURSES_TAR_FILE=ncurses-${NCURSES_RELEASE}.tar.gz
+NCURSES_TAR_PATH="./${NCURSES_TAR_FILE}"
+NCURSES_SRC="./ncurses-${NCURSES_RELEASE}"
+if ! [ -d "$NCURSES_SRC" ]
+then
+    echo Downloading ncurses $NCURSES_RELEASE
+    curl -o "${NCURSES_TAR_FILE}" http://ftp.gnu.org/pub/gnu/ncurses/${NCURSES_TAR_FILE}
+    tar xf "$NCURSES_TAR_FILE"
+fi
+
+#if ! [ -e "$NDK_ADDON_PREFIX/lib/libncurses.a" ]
+#then
+    pushd $NCURSES_SRC > /dev/null
+    if ! [ -e "lib/libncurses.a" ]
+    then
+        ./configure --host=$TARGET --build=$BUILD_ARCH --with-build-cc=$BUILD_GCC --enable-static --disable-shared --without-manpages --without-cxx-binding
+        echo '#undef HAVE_LOCALE_H' >> "$NCURSES_SRC/include/ncurses_cfg.h" # TMP hack
+        make $MAKEFLAGS
+    fi
+    sudo make install prefix=/usr/$TARGET
+    popd > /dev/null
+#fi
+
+<<EOF
+# downloading, cross-building, and installing GMP
+GMP_RELEASE=6.0.0a
+GMP_TAR_FILE=gmp-${GMP_RELEASE}.tar.xz
+GMP_TAR_PATH="./${GMP_TAR_FILE}"
+GMP_SRC="./gmp-6.0.0"
+if ! [ -d "$GMP_SRC" ]
+then
+    echo Downloading gmp $GMP_RELEASE
+    curl -o "${TARDIR}/${GMP_TAR_FILE}" https://gmplib.org/download/gmp/${GMP_TAR_FILE}
+    check_md5 "$GMP_TAR_PATH" "$GMP_MD5"
+    (cd $NDK_ADDON_SRC; tar xf "$TARDIR/$GMP_TAR_FILE")
+fi
+if ! [ -e "$NDK_ADDON_PREFIX/lib/libgmp.a" ]
+then
+    pushd $GMP_SRC > /dev/null
+    if ! [ -e ".libs/libgmp.a" ]
+    then
+        ./configure --prefix="$NDK_ADDON_PREFIX" --host=$NDK_TARGET --build=$BUILD_ARCH --with-build-cc=$BUILD_GCC --enable-static --disable-shared
+        make $MAKEFLAGS
+    fi
+    make install
+    popd > /dev/null
+fi
+EOF
 
 cd ghc
 
@@ -83,8 +139,8 @@ echo ---------------------------------------------------------------------------
 echo --------------------------------------------------------------------------------
 echo -- Building
 echo --------------------------------------------------------------------------------
-make -j4
-make -j4
+make $MAKEFLAGS
+make $MAKEFLAGS
 
 echo --------------------------------------------------------------------------------
 echo -- Testing
