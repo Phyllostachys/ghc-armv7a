@@ -65,7 +65,7 @@ fi
     then
         ./configure --host=$TARGET --build=$BUILD_ARCH --with-build-cc=$BUILD_GCC --enable-static --disable-shared --without-manpages --without-cxx-binding
         echo '#undef HAVE_LOCALE_H' >> "$NCURSES_SRC/include/ncurses_cfg.h" # TMP hack
-        patch ./misc/run_tic.sh < ../run_tic.sh.patch
+        patch ./misc/run_tic.sh < ../run_tic.sh.patch # from http://stackoverflow.com/questions/25258930/cross-compiling-ncurses-5-9-for-arm-form-lib-not-found
         make $MAKEFLAGS
     fi
     sudo make install prefix=/usr/$TARGET
