@@ -26,6 +26,7 @@ function check_progs {
 check_progs git
 check_progs curl
 check_progs tar
+check_progs bzip2
 check_progs make
 check_progs $TARGET_GCC
 check_progs patch
@@ -33,6 +34,7 @@ check_progs patch
 echo --------------------------------------------------------------------------------
 echo -- Checking if ghc has been downloaded
 echo --------------------------------------------------------------------------------
+<<EOF
 if ! [ -d "./ghc" ]
 then
     echo -- Getting from GitHub
@@ -42,6 +44,19 @@ else
     cd ghc
     git pull
     cd ..
+fi
+EOF
+
+GHC_RELEASE=7.8.4
+GHC_TAR_FILE=ghc-${GHC_RELEASE}-src.tar.xz
+GHC_TAR_PATH="./${GHC_TAR_FILE}"
+GHC_SRC="./ghc-${GHC_RELEASE}"
+if ! [ -f "GHC_TAR_FILE" ]; then
+    echo curl -o "$GHC_TAR_FILE" https://downloads.haskell.org/~ghc/$GHC_RELEASE/$GHC_TAR_FILE
+    curl -o "$GHC_TAR_FILE" https://downloads.haskell.org/~ghc/$GHC_RELEASE/$GHC_TAR_FILE
+fi
+if ! [ -d "$GHC_SRC" ]; then
+    tar -xJf "$GHC_TAR_FILE"
 fi
 
 ## Borrowed the downloading and building scripts from ghc-android (https://github.com/neurocyte/ghc-android)
@@ -58,9 +73,8 @@ if ! [ -d "$NCURSES_SRC" ]; then
     tar xf "$NCURSES_TAR_FILE"
 fi
 
-#if ! [ -e "$NDK_ADDON_PREFIX/lib/libncurses.a" ]
-#then
-    pushd $NCURSES_SRC > /dev/null
+#if ! [ -e "$NDK_ADDON_PREFIX/lib/libncurses.a" ]; then
+    cd $NCURSES_SRC
     if ! [ -e "lib/libncurses.a" ]
     then
         ./configure --host=$TARGET --build=$BUILD_ARCH --with-build-cc=$BUILD_GCC --enable-static --disable-shared --without-manpages --without-cxx-binding
@@ -69,7 +83,7 @@ fi
         make $MAKEFLAGS
     fi
     sudo make install prefix=/usr/$TARGET
-    popd > /dev/null
+    cd ..
 #fi
 
 <<EOF
@@ -98,7 +112,7 @@ then
 fi
 EOF
 
-cd ghc
+cd $GHC_SRC
 
 # initial setup with new repo or to grab stuff needed
 echo --------------------------------------------------------------------------------
@@ -155,13 +169,13 @@ EOF
 echo --------------------------------------------------------------------------------
 echo -- Configuring
 echo --------------------------------------------------------------------------------
-./configure --enable-unregisterised --target=$TARGET --with-gcc=$TARGET_GCC -with-ld=$TARGET_LD --with-nm=$TARGET_NM --with-objdump=$TARGET_OBJDUMP
+./configure --target=$TARGET --with-gcc=$TARGET_GCC -with-ld=$TARGET_LD --with-nm=$TARGET_NM --with-objdump=$TARGET_OBJDUMP --enable-unregisterised
 
 # build
 echo --------------------------------------------------------------------------------
 echo -- Building
 echo --------------------------------------------------------------------------------
-make $MAKEFLAGS
+export C_INCLUDE_PATH=/usr/$TARGET/include # http://stackoverflow.com/questions/18592674/install-haskell-terminfo-in-windows
 make $MAKEFLAGS
 
 echo --------------------------------------------------------------------------------
