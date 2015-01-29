@@ -26,7 +26,6 @@ function check_progs {
 check_progs git
 check_progs curl
 check_progs tar
-check_progs bzip2
 check_progs make
 check_progs $TARGET_GCC
 check_progs patch
@@ -52,7 +51,7 @@ GHC_TAR_FILE=ghc-${GHC_RELEASE}-src.tar.xz
 GHC_TAR_PATH="./${GHC_TAR_FILE}"
 GHC_SRC="./ghc-${GHC_RELEASE}"
 if ! [ -f "GHC_TAR_FILE" ]; then
-    echo curl -o "$GHC_TAR_FILE" https://downloads.haskell.org/~ghc/$GHC_RELEASE/$GHC_TAR_FILE
+    echo Downloading ghc $GHC_RELEASE
     curl -o "$GHC_TAR_FILE" https://downloads.haskell.org/~ghc/$GHC_RELEASE/$GHC_TAR_FILE
 fi
 if ! [ -d "$GHC_SRC" ]; then
