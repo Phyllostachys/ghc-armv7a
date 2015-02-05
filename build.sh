@@ -1,10 +1,13 @@
 #!/bin/bash
 
 TARGET=arm-linux-gnueabihf
+TARGET_COMPILER_PATH=/usr/$TARGET
 TARGET_GCC=$TARGET-gcc
 TARGET_LD=$TARGET-ld
 TARGET_NM=$TARGET-nm
 TARGET_OBJDUMP=$TARGET-objdump
+LLVM_OPT=opt-3.4
+LLVM_LLC=llc-3.4
 
 BUILD_GCC=gcc
 BUILD_ARCH=$($BUILD_GCC -v 2>&1 | grep ^Target: | cut -f 2 -d ' ')
@@ -50,7 +53,7 @@ GHC_RELEASE=7.8.4
 GHC_TAR_FILE=ghc-${GHC_RELEASE}-src.tar.xz
 GHC_TAR_PATH="./${GHC_TAR_FILE}"
 GHC_SRC="./ghc-${GHC_RELEASE}"
-if ! [ -f "GHC_TAR_FILE" ]; then
+if ! [ -f "$GHC_TAR_FILE" ]; then
     echo Downloading ghc $GHC_RELEASE
     curl -o "$GHC_TAR_FILE" https://downloads.haskell.org/~ghc/$GHC_RELEASE/$GHC_TAR_FILE
 fi
@@ -64,6 +67,9 @@ NCURSES_RELEASE=5.9
 NCURSES_TAR_FILE=ncurses-${NCURSES_RELEASE}.tar.gz
 NCURSES_TAR_PATH="./${NCURSES_TAR_FILE}"
 NCURSES_SRC="./ncurses-${NCURSES_RELEASE}"
+echo --------------------------------------------------------------------------------
+echo -- Checking for NCURSES $NCURSES_RELEASE
+echo --------------------------------------------------------------------------------
 if ! [ -f "$NCURSES_TAR_FILE" ]; then
     echo Downloading ncurses $NCURSES_RELEASE
     curl -o "${NCURSES_TAR_FILE}" http://ftp.gnu.org/pub/gnu/ncurses/${NCURSES_TAR_FILE}
@@ -72,7 +78,7 @@ if ! [ -d "$NCURSES_SRC" ]; then
     tar xf "$NCURSES_TAR_FILE"
 fi
 
-#if ! [ -e "$NDK_ADDON_PREFIX/lib/libncurses.a" ]; then
+if ! [ -e "$TARGET_COMPILER_PATH/lib/libncurses.a" ]; then
     cd $NCURSES_SRC
     if ! [ -e "lib/libncurses.a" ]
     then
@@ -83,7 +89,7 @@ fi
     fi
     sudo make install prefix=/usr/$TARGET
     cd ..
-#fi
+fi
 
 <<EOF
 # downloading, cross-building, and installing GMP
@@ -168,7 +174,7 @@ EOF
 echo --------------------------------------------------------------------------------
 echo -- Configuring
 echo --------------------------------------------------------------------------------
-./configure --target=$TARGET --with-gcc=$TARGET_GCC -with-ld=$TARGET_LD --with-nm=$TARGET_NM --with-objdump=$TARGET_OBJDUMP --enable-unregisterised
+./configure --target=$TARGET --with-gcc=$TARGET_GCC --with-ld=$TARGET_LD --with-nm=$TARGET_NM --with-objdump=$TARGET_OBJDUMP --with-opt=$LLVM_OPT --with-llc=$LLVM_LLC --enable-unregisterised
 
 # build
 echo --------------------------------------------------------------------------------
