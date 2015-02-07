@@ -15,7 +15,6 @@ MAKEFLAGS=${MAKEFLAGS:--j4}
 
 echo --------------------------------------------------------------------------------
 echo -- Checking if needed programs are installed
-echo --------------------------------------------------------------------------------
 function check_progs {
     if ! command -v $1 >/dev/null
     then
@@ -35,7 +34,6 @@ check_progs patch
 
 echo --------------------------------------------------------------------------------
 echo -- Checking if ghc has been downloaded
-echo --------------------------------------------------------------------------------
 <<EOF
 if ! [ -d "./ghc" ]
 then
@@ -52,12 +50,12 @@ EOF
 GHC_RELEASE=7.8.4
 GHC_TAR_FILE=ghc-${GHC_RELEASE}-src.tar.xz
 GHC_TAR_PATH="./${GHC_TAR_FILE}"
-GHC_SRC="./ghc-${GHC_RELEASE}"
+GHC_SRC="ghc-${GHC_RELEASE}"
 if ! [ -f "$GHC_TAR_FILE" ]; then
     echo Downloading ghc $GHC_RELEASE
     curl -o "$GHC_TAR_FILE" https://downloads.haskell.org/~ghc/$GHC_RELEASE/$GHC_TAR_FILE
 fi
-if ! [ -d "$GHC_SRC" ]; then
+if ! [ -d "./$GHC_SRC" ]; then
     tar -xJf "$GHC_TAR_FILE"
 fi
 
@@ -69,7 +67,6 @@ NCURSES_TAR_PATH="./${NCURSES_TAR_FILE}"
 NCURSES_SRC="./ncurses-${NCURSES_RELEASE}"
 echo --------------------------------------------------------------------------------
 echo -- Checking for NCURSES $NCURSES_RELEASE
-echo --------------------------------------------------------------------------------
 if ! [ -f "$NCURSES_TAR_FILE" ]; then
     echo Downloading ncurses $NCURSES_RELEASE
     curl -o "${NCURSES_TAR_FILE}" http://ftp.gnu.org/pub/gnu/ncurses/${NCURSES_TAR_FILE}
@@ -82,7 +79,7 @@ if ! [ -e "$TARGET_COMPILER_PATH/lib/libncurses.a" ]; then
     cd $NCURSES_SRC
     if ! [ -e "lib/libncurses.a" ]
     then
-        ./configure --host=$TARGET --build=$BUILD_ARCH --with-build-cc=$BUILD_GCC --enable-static --disable-shared --without-manpages --without-cxx-binding
+        ./configure --prefix=/usr/$TARGET --host=$TARGET --build=$BUILD_ARCH --with-build-cc=$BUILD_GCC --enable-static --disable-shared --without-manpages --without-cxx-binding
         echo '#undef HAVE_LOCALE_H' >> "$NCURSES_SRC/include/ncurses_cfg.h" # TMP hack
         patch ./misc/run_tic.sh < ../run_tic.sh.patch # from http://stackoverflow.com/questions/25258930/cross-compiling-ncurses-5-9-for-arm-form-lib-not-found
         make $MAKEFLAGS
@@ -91,50 +88,48 @@ if ! [ -e "$TARGET_COMPILER_PATH/lib/libncurses.a" ]; then
     cd ..
 fi
 
-<<EOF
 # downloading, cross-building, and installing GMP
 GMP_RELEASE=6.0.0a
 GMP_TAR_FILE=gmp-${GMP_RELEASE}.tar.xz
 GMP_TAR_PATH="./${GMP_TAR_FILE}"
-GMP_SRC="./gmp-6.0.0"
-if ! [ -d "$GMP_SRC" ]
-then
+GMP_SRC="gmp-6.0.0"
+echo --------------------------------------------------------------------------------
+echo -- Checking for GMP $GMP_RELEASE
+if ! [ -f "$GMP_TAR_FILE" ]; then
     echo Downloading gmp $GMP_RELEASE
-    curl -o "${TARDIR}/${GMP_TAR_FILE}" https://gmplib.org/download/gmp/${GMP_TAR_FILE}
-    check_md5 "$GMP_TAR_PATH" "$GMP_MD5"
-    (cd $NDK_ADDON_SRC; tar xf "$TARDIR/$GMP_TAR_FILE")
+    curl -o "${GMP_TAR_FILE}" https://gmplib.org/download/gmp/${GMP_TAR_FILE}
 fi
-if ! [ -e "$NDK_ADDON_PREFIX/lib/libgmp.a" ]
-then
-    pushd $GMP_SRC > /dev/null
-    if ! [ -e ".libs/libgmp.a" ]
+if ! [ -d "$GMP_SRC" ]; then
+    tar xf "$GMP_TAR_FILE"
+fi
+
+if ! [ -e "$TARGET_COMPILER_PATH/lib/libgmp.a" ]; then
+    cd $GMP_SRC
+    if ! [ -e "libs/libgmp.a" ]
     then
-        ./configure --prefix="$NDK_ADDON_PREFIX" --host=$NDK_TARGET --build=$BUILD_ARCH --with-build-cc=$BUILD_GCC --enable-static --disable-shared
+        ./configure --prefix=/usr/$TARGET --host=$TARGET --build=$BUILD_ARCH --with-build-cc=$BUILD_GCC --enable-static --disable-shared
         make $MAKEFLAGS
     fi
-    make install
-    popd > /dev/null
+    sudo make install
+    cd ..
 fi
-EOF
 
 cd $GHC_SRC
 
 # initial setup with new repo or to grab stuff needed
 echo --------------------------------------------------------------------------------
 echo -- Syncing
-echo --------------------------------------------------------------------------------
 ./sync-all get
 ./boot
 
 # setup make file
 echo --------------------------------------------------------------------------------
 echo -- Setting up the makefile
-echo --------------------------------------------------------------------------------
-if ! [ -d "mk/${TARGET}_build.mk" ]
+if ! [ -d "mk/build.mk" ]
 then
-    touch "mk/${TARGET}_build.mk"
+    touch "mk/build.mk"
 fi
-cat > mk/$TARGET_build.mk <<EOF
+cat > mk/build.mk <<EOF
 # -------- Miscellaneous variables --------------------------------------------
 
 # Set to V = 0 to get prettier build output.
@@ -173,24 +168,32 @@ EOF
 # do configure
 echo --------------------------------------------------------------------------------
 echo -- Configuring
-echo --------------------------------------------------------------------------------
 ./configure --target=$TARGET --with-gcc=$TARGET_GCC --with-ld=$TARGET_LD --with-nm=$TARGET_NM --with-objdump=$TARGET_OBJDUMP --with-opt=$LLVM_OPT --with-llc=$LLVM_LLC --enable-unregisterised
 
 # build
 echo --------------------------------------------------------------------------------
 echo -- Building
-echo --------------------------------------------------------------------------------
-export C_INCLUDE_PATH=/usr/$TARGET/include # http://stackoverflow.com/questions/18592674/install-haskell-terminfo-in-windows
-make $MAKEFLAGS
+if ! [ -e "./$GHC_SRC/inplace/bin/ghc-stage1" ]; then
+    export C_INCLUDE_PATH=/usr/$TARGET/include # http://stackoverflow.com/questions/18592674/install-haskell-terminfo-in-windows
+    make $MAKEFLAGS
+fi
 
 echo --------------------------------------------------------------------------------
 echo -- Testing
-echo --------------------------------------------------------------------------------
 cd ..
-touch test.hs
-cat > test.hs <<EOF
+if ! [ -e "./$GHC_SRC/inplace/bin/ghc-stage1" ]; then
+    echo -- Build Failed
+    exit 1
+fi
+
+if ! [ -f "test.hs" ]; then
+    touch test.hs
+    cat > test.hs <<EOF
 main = putStrLn "Hello World"
 EOF
+fi
 
-./ghc/in-place/ghc-stage1 test.hs
-file test
+./$GHC_SRC/inplace/bin/ghc-stage1 test.hs -O2 -Wall -optl-static -optl-pthread
+if [ -e "test"  ]; then
+    file test
+fi
