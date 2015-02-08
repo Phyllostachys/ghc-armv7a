@@ -13,6 +13,7 @@ Makefile.in
 /missing
 /stamp-h1
 
-/test.hs
+/test*
 /ghc*
 /ncurses*
+/gmp*

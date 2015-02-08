@@ -16,12 +16,12 @@ MAKEFLAGS=${MAKEFLAGS:--j4}
 echo --------------------------------------------------------------------------------
 echo -- Checking if needed programs are installed
 function check_progs {
-    if ! command -v $1 >/dev/null
+    if ! command -v "$1" >/dev/null
     then
-        echo Need $1
+        echo Need "$1"
         exit 1
     else
-        echo Have $1
+        echo Have "$1"
     fi
 }
 
@@ -49,7 +49,6 @@ EOF
 
 GHC_RELEASE=7.8.4
 GHC_TAR_FILE=ghc-${GHC_RELEASE}-src.tar.xz
-GHC_TAR_PATH="./${GHC_TAR_FILE}"
 GHC_SRC="ghc-${GHC_RELEASE}"
 if ! [ -f "$GHC_TAR_FILE" ]; then
     echo Downloading ghc $GHC_RELEASE
@@ -63,15 +62,14 @@ fi
 # downloading, cross-building, and installing ncurses
 NCURSES_RELEASE=5.9
 NCURSES_TAR_FILE=ncurses-${NCURSES_RELEASE}.tar.gz
-NCURSES_TAR_PATH="./${NCURSES_TAR_FILE}"
-NCURSES_SRC="./ncurses-${NCURSES_RELEASE}"
+NCURSES_SRC="ncurses-${NCURSES_RELEASE}"
 echo --------------------------------------------------------------------------------
 echo -- Checking for NCURSES $NCURSES_RELEASE
 if ! [ -f "$NCURSES_TAR_FILE" ]; then
     echo Downloading ncurses $NCURSES_RELEASE
     curl -o "${NCURSES_TAR_FILE}" http://ftp.gnu.org/pub/gnu/ncurses/${NCURSES_TAR_FILE}
 fi
-if ! [ -d "$NCURSES_SRC" ]; then
+if ! [ -d "./$NCURSES_SRC" ]; then
     tar xf "$NCURSES_TAR_FILE"
 fi
 
@@ -91,7 +89,6 @@ fi
 # downloading, cross-building, and installing GMP
 GMP_RELEASE=6.0.0a
 GMP_TAR_FILE=gmp-${GMP_RELEASE}.tar.xz
-GMP_TAR_PATH="./${GMP_TAR_FILE}"
 GMP_SRC="gmp-6.0.0"
 echo --------------------------------------------------------------------------------
 echo -- Checking for GMP $GMP_RELEASE
